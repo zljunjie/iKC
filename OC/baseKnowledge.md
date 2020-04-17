@@ -8,36 +8,6 @@
 // KVC会触发
 // willChangeValueForKey与didChangeValueForKey同时调用会触发
 ```
-## 2.消息调用的过程
-```
-Runtime
-objc_msgSend()
-1 通过isa指针找到Class
-2 从Class的Cache中寻找Selector
-3 如果3未命中,在Class的MethodList中寻找Selector
-4 如果在Class中没有找到,继续往SuperClass中寻找 (重复2,3)
-5 如果找到Selector，就去执行方法的IMP
-6 NSObject也未找到时开始执行消息转发(动态方法解析,备源接受者,消息重定向)
-7 runtime调用resolveInstanceMethod 或者 resolveClassMethod方法,开发者可以在这两个方法中动态添加Method
-8 如果未重写7中的方法,runtime开始询问是否有其他的对象可以处理当前Selector,此时调用forwardingTargetForSelector 此方法返回可调用该方法的对象
-9 若8未找到,runtime则进行消息重定向,runtime调用methodSignatureForSelector获取函数签名，如果返回, runtime将执行forwardInvocation方法消息分装成NSInvocation对象,分发出去
-```
-```
-struct objc_class {
-	Class _Nonenull isa OBJC_ISA_AVALIABILITY
-#if !__OBJC2__
-	Class _Nullable super_class
-	const char * _Nonenull name
-	long version
-	long info
-	long instance_size
-	struct objc_var_list * _Nullable ivars
-	struct objc_method_list * _Nullable methodLists
-	struct objc_cache * _Nonenull cache
-	struct objc_protocol_list * _Nullable protocols
-#end
-} 
-```
 
 ## 响应链
 
@@ -49,7 +19,7 @@ struct objc_class {
 3. 应用唤起Runloop并响应Source1回调
 4. 回调函数处理之后会将事件包装后传给UIApplication
 5. UIApplication传递给KeyWindow
-6. window通过对subView开始进行遍历,寻找合适的响应对象,通过调用subViewhitText:withEvent:->View方法 (一层一层的调用下去,直至找到合适的响应者或者响应被废弃)
+6. window通过对subView开始进行遍历,寻找合适的响应对象,通过调用subView hitTest:withEvent:->View方法 (一层一层的调用下去,直至找到合适的响应者或者响应被废弃)
 
 扩大响应范围
 继承自UIResponder的类可以实现 -pointInside:CGPoint withEvent:UIEvent方法，
@@ -96,8 +66,14 @@ main执行过程
 8. 构建RootViewController
 ```
 
-## 三种Block
+## 自动释放池
 
 ```
+结构: Page结构组成的双向链表
+autoreleasePoolPage结构可以存储4096个字节,其中56个字节用于存储Page自身成员变量,其他的字节用于存储加入到自动释放池中的对象
+结合RunLoop运行
+监听runloop的Entry、beforewaiting两个状态 优先级分别为最高与最低
+在Entry回调时创建自动释放池(Push)
+在BeforeWaiting回调时 释放自动释放池并构建新的自动释放池(Pop之后在Push)
 
 ```
